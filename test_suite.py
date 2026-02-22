@@ -43,7 +43,7 @@ def test_flash_flood():
     print("Sending 11 highly similar tickets to trigger the Master Incident...")
     base_text = "The entire database cluster is down and returning 500 errors."
     
-    for i in range(1, 12):
+    for i in range(1, 16):
         payload = {"id": f"STORM-TEST-{i:02d}", "text": base_text}
         requests.post(BASE_URL, json=payload)
     

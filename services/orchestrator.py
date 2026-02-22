@@ -1,6 +1,6 @@
 import time
 from sentence_transformers import SentenceTransformer, util
-from services.transformer_ml import predict_category
+from services.transformer_ml import predict_category, calculate_urgency_score
 from services.classifier import classify_ticket  # Your Milestone 1 fallback
 
 print("Loading Sentence Embedding model for Deduplication...")
@@ -38,23 +38,23 @@ def check_ticket_storm(text: str) -> bool:
     ticket_history.append((now, new_embedding))
     
     # 5. Check threshold (> 10 similar tickets)
-    return similar_count >= 10
+    return similar_count > 10
 
-def get_category_with_circuit_breaker(text: str) -> str:
+def get_category_with_circuit_breaker(text: str) -> tuple[str, float]:#str:
     """Fails over to M1 model if Transformer latency > 500ms."""
     start_time = time.time()
     
     # Run the heavy Transformer model
     category = predict_category(text)
-    
+    urgency_score = calculate_urgency_score(text)
     latency_ms = (time.time() - start_time) * 1000
     
     if latency_ms > 500:
         print(f"⚠️ CIRCUIT BREAKER TRIPPED! Latency {latency_ms:.2f}ms > 500ms. Using M1 Fallback.")
         # Fallback to the regex baseline
-        return classify_ticket(text) 
+        return classify_ticket(text) , urgency_score
     
-    return category
+    return category , urgency_score
 
 def route_to_best_agent(category: str) -> str:
     """Constraint Optimization based on skill match and capacity."""

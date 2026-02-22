@@ -12,6 +12,13 @@ celery_app = Celery(
     backend="redis://localhost:6379/0"
 )
 
+def log_to_system(msg: str):
+    print(msg) # Still print to VS Code just in case
+    # Push log to a Redis list called "system_logs"
+    redis_client.lpush("system_logs", msg)
+    # Keep only the last 50 logs to save memory
+    redis_client.ltrim("system_logs", 0, 50)
+
 # Initialize Redis client for Atomic Locks 
 redis_client = redis.Redis(host='localhost', port=6379, db=1)
 
@@ -21,33 +28,36 @@ WEBHOOK_URL = "https://echo.free.beeceptor.com" # Mock webhook URL for testing
 def process_ticket(self, ticket_id: str, text: str):
     lock_key = f"lock_ticket_{ticket_id}"
     if not redis_client.set(lock_key, "locked", nx=True, ex=10):
+        log_to_system(f"🔒 Duplicate processing prevented for {ticket_id}.")
         return f"Duplicate processing prevented for {ticket_id}."
 
-    try:
-        # --- MILESTONE 3: DEDUPLICATION ---
-        if check_ticket_storm(text):
-            print(f"🚨 TICKET STORM DETECTED! Master Incident created for {ticket_id}. Suppressing individual routing.")
-            return {"id": ticket_id, "status": "Suppressed (Master Incident)"}
+    # --- MILESTONE 3: DEDUPLICATION ---
+    if check_ticket_storm(text):
+        print(f"🚨 TICKET STORM DETECTED! Master Incident created for {ticket_id}. Suppressing individual routing.")
+        log_to_system(f"🚨 TICKET STORM DETECTED! Master Incident created for {ticket_id}. Suppressing individual routing.")
+        return {"id": ticket_id, "status": "Suppressed (Master Incident)"}
 
-        # --- MILESTONE 3: CIRCUIT BREAKER ---
-        category = get_category_with_circuit_breaker(text)
-        
-        # Calculate Urgency (Milestone 2)
-        urgency_score = calculate_urgency_score(text)
-        
-        # --- MILESTONE 3: SKILL-BASED ROUTING ---
-        assigned_agent = route_to_best_agent(category)
-        
-        print(f"[{ticket_id}] Category: {category} | Agent: {assigned_agent} | Urgency: {urgency_score}")
+    # --- MILESTONE 3: CIRCUIT BREAKER ---
+    category , urgency_score = get_category_with_circuit_breaker(text)
+    
+    # Calculate Urgency (Milestone 2)
+    #urgency_score = calculate_urgency_score(text)
+    
+    # --- MILESTONE 3: SKILL-BASED ROUTING ---
+    assigned_agent = route_to_best_agent(category)
+    
+    print(f"[{ticket_id}] Category: {category} | Agent: {assigned_agent} | Urgency: {urgency_score}")
+    log_to_system(f"✅ [{ticket_id}] Category: {category} | Agent: {assigned_agent} | Urgency: {urgency_score}")
 
-        if urgency_score > 0.8:
-            requests.post(WEBHOOK_URL, json={"text": f"🚨 URGENT: {ticket_id} routed to {assigned_agent}"})
-            print(f"[{ticket_id}] Webhook fired!")
+    if urgency_score > 0.8:
+        requests.post(WEBHOOK_URL, json={"text": f"🚨 URGENT: {ticket_id} routed to {assigned_agent}"})
+        print(f"[{ticket_id}] Webhook fired!")
+        log_to_system(f"🔔 [{ticket_id}] Webhook fired!")
 
-        return {"id": ticket_id, "category": category, "agent": assigned_agent, "urgency": urgency_score}
-        
-    finally:
-        redis_client.delete(lock_key)
+    return {"id": ticket_id, "category": category, "agent": assigned_agent, "urgency": urgency_score}
+            
+    # finally:
+    #     redis_client.delete(lock_key)
 # def process_ticket(self, ticket_id: str, text: str):
 #     lock_key = f"lock_ticket_{ticket_id}"
     
