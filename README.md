@@ -136,6 +136,8 @@ python test_suite.py
 ------------------------------------------------------------------------
 
 Built for System Design & NLP Hackathon 🚀
+<img width="1468" height="927" alt="image" src="https://github.com/user-attachments/assets/e96b1165-0aa8-4081-bdae-8dbff12839b7" />
+
 <img width="1417" height="607" alt="image" src="https://github.com/user-attachments/assets/22f48ede-748f-45fd-b378-ca8b84c5e082" />
 
 <img width="1426" height="666" alt="image" src="https://github.com/user-attachments/assets/ac92ab98-18b2-4d64-85c6-6447f7da05f6" />
