@@ -38,7 +38,7 @@ def check_ticket_storm(text: str) -> bool:
     ticket_history.append((now, new_embedding))
     
     # 5. Check threshold (> 10 similar tickets)
-    return similar_count >= 10
+    return similar_count > 10
 
 def get_category_with_circuit_breaker(text: str) -> str:
     """Fails over to M1 model if Transformer latency > 500ms."""
