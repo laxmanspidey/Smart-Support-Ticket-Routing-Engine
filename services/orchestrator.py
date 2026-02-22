@@ -1,7 +1,7 @@
 import time
 from sentence_transformers import SentenceTransformer, util
 from services.transformer_ml import predict_category, calculate_urgency_score
-from services.classifier import classify_ticket  # Your Milestone 1 fallback
+from services.classifier import classify_ticket, check_urgency  # Your Milestone 1 fallback
 
 print("Loading Sentence Embedding model for Deduplication...")
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
@@ -47,12 +47,13 @@ def get_category_with_circuit_breaker(text: str) -> tuple[str, float]:#str:
     # Run the heavy Transformer model
     category = predict_category(text)
     urgency_score = calculate_urgency_score(text)
+    
     latency_ms = (time.time() - start_time) * 1000
     
     if latency_ms > 500:
         print(f"⚠️ CIRCUIT BREAKER TRIPPED! Latency {latency_ms:.2f}ms > 500ms. Using M1 Fallback.")
         # Fallback to the regex baseline
-        return classify_ticket(text) , urgency_score
+        return classify_ticket(text) , check_urgency(text)
     
     return category , urgency_score
 

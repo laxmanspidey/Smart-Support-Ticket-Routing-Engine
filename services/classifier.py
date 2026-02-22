@@ -13,8 +13,11 @@ def classify_ticket(text: str) -> str:
         # Defaulting to Technical if other keywords aren't found
         return "Technical"
 
-def check_urgency(text: str) -> bool:
+def check_urgency(text: str) -> float:
     """Regex-based heuristic for urgency."""
     # Searching for flags like "broken" or "ASAP"
     pattern = re.compile(r'\b(broken|asap|urgent|down|crash)\b', re.IGNORECASE)
-    return bool(pattern.search(text))
+    if pattern.search(text):
+        return 1.0
+    else:
+        return 0.0
